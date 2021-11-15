@@ -1,3 +1,4 @@
+// search_server_s1_t2_v2.cpp
 
 #include <algorithm>
 #include <cmath>
@@ -79,8 +80,8 @@ public:
             });
     }
     
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus statusss) const {
-        return(FindTopDocuments(raw_query, [statusss](int document_id, DocumentStatus status, int rating) { return status == statusss; }));
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status_document) const {
+        return(FindTopDocuments(raw_query, [status_document](int document_id, DocumentStatus status, int rating) { return status == status_document; }));
     }
     
     vector<Document> FindTopDocuments(const string& raw_query) const {
@@ -212,6 +213,7 @@ private:
     double ComputeWordInverseDocumentFreq(const string& word) const {
         return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
     }
+    
     template<typename KeyMapper>
     vector<Document> FindAllDocuments(const Query& query, KeyMapper key_mapper) const {
         map<int, double> document_to_relevance;
@@ -221,7 +223,10 @@ private:
             }
             const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
             for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
-                document_to_relevance[document_id] += term_freq * inverse_document_freq;  
+                auto document_information = documents_.at(document_id); 
+                if (key_mapper(document_id, document_information.status, document_information.rating)){
+                    document_to_relevance[document_id] += term_freq * inverse_document_freq;  
+                }
             }
         }
         
@@ -234,17 +239,14 @@ private:
             }
         }
         
-        
-        
         vector<Document> matched_documents;
         for (const auto [document_id, relevance] : document_to_relevance) {
-                if (key_mapper(document_id,documents_.at(document_id).status,documents_.at(document_id).rating)){
-                    matched_documents.push_back({
-                        document_id,
-                        relevance,
-                        documents_.at(document_id).rating
-                        });
-                }
+            matched_documents.push_back({
+                document_id,
+                relevance,
+                documents_.at(document_id).rating
+                });
+                
         }
         return matched_documents;
     }
