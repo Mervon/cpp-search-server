@@ -352,56 +352,62 @@ void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& 
 
 // Тест на добавление документов и их нахождение по поисковому запросу
 
-    void TestForAddDocument(){
+    void TestForAddDocument() {
         vector<int> ratings = {1,2,3};
         {
             SearchServer server;
+            ASSERT_EQUAL(server.GetDocumentCount(), 0);
             server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
             server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::ACTUAL, ratings);
+            ASSERT_EQUAL(server.GetDocumentCount(), 2);
             server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::ACTUAL, ratings);
             server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
             server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
             server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-            auto found_documents = server.FindTopDocuments("cat"s);
-            ASSERT_EQUAL(found_documents.size(), 5);
+            ASSERT_EQUAL(server.GetDocumentCount(), 6);
+            const auto found_docs = server.FindTopDocuments("dog"s);
+            ASSERT_EQUAL(found_docs.size(), 5u);
         }
 
         {
             SearchServer server;
+            ASSERT_EQUAL(server.GetDocumentCount(), 0);
             server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
             server.AddDocument(11, "cat"s, DocumentStatus::ACTUAL, ratings);
             server.AddDocument(12, "cat cat"s, DocumentStatus::ACTUAL, ratings);
+            ASSERT_EQUAL(server.GetDocumentCount(), 3);
             server.AddDocument(13, "dog"s, DocumentStatus::ACTUAL, ratings);
+            ASSERT_EQUAL(server.GetDocumentCount(), 4);
             const auto found_docs = server.FindTopDocuments("dog"s);
-            ASSERT_EQUAL(found_docs.size(), 2);
+            ASSERT_EQUAL(found_docs.size(), 2u);
         }
     }
 
 // Тест проверяет, что поисковая система исключает стоп-слова при добавлении документов
-void TestExcludeStopWordsFromAddedDocumentContent() {
-    const int doc_id = 42;
-    const string content = "cat in the city"s;
-    const vector<int> ratings = {1, 2, 3};
-    // Сначала убеждаемся, что поиск слова, не входящего в список стоп-слов,
-    // находит нужный документ
-    {
-        SearchServer server;
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        const auto found_docs = server.FindTopDocuments("in"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
-        const Document& doc0 = found_docs[0];
-        ASSERT_EQUAL(doc0.id, doc_id);
-    }
+    void TestExcludeStopWordsFromAddedDocumentContent() {
+        const int doc_id = 42;
+        const string content = "cat in the city"s;
+        const vector<int> ratings = {1, 2, 3};
+        // Сначала убеждаемся, что поиск слова, не входящего в список стоп-слов,
+        // находит нужный документ
+        {
+            SearchServer server;
+            server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+            const auto found_docs = server.FindTopDocuments("in"s);
+            ASSERT_EQUAL(found_docs.size(), 1u);
+            const Document& doc0 = found_docs[0];
+            ASSERT_EQUAL(doc0.id, doc_id);
+        }
 
-    // Затем убеждаемся, что поиск этого же слова, входящего в список стоп-слов,
-    // возвращает пустой результат
-    {
-        SearchServer server;
-        server.SetStopWords("in the"s);
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        ASSERT(server.FindTopDocuments("in"s).empty());
+        // Затем убеждаемся, что поиск этого же слова, входящего в список стоп-слов,
+        // возвращает пустой результат
+        {
+            SearchServer server;
+            server.SetStopWords("in the"s);
+            server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+            ASSERT(server.FindTopDocuments("in"s).empty());
+        }
     }
-}
 
 // Разместите код остальных тестов здесь
 
@@ -422,7 +428,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
             SearchServer server;
             server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
             const auto found_docs = server.FindTopDocuments("hello im -test in"s);
-            ASSERT_EQUAL(found_docs.size(), 1);
+            ASSERT_EQUAL(found_docs.size(), 1u);
         }
     }
 
@@ -432,7 +438,6 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         const int doc_id = 42;
         const string content = "just random words put in here to check test hello hi im friedly"s;
         const vector<int> ratings = {1, 2, 3};
-
         {
             vector<string> words;
             DocumentStatus status;
@@ -466,199 +471,12 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
             vector<string> check  = {};
             ASSERT_EQUAL(words, check);
         }
-
-
     }
 
 // Тест на проверку сортировки найденных документов по релевантности
 
-    void TestForRelevanceSorting(){
-    const vector<int> ratings = {1, 2, 3};
-
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-        auto found_documents = server.FindTopDocuments("cat"s);
-        for (int i = 0; i < found_documents.size() - 1; ++i){
-            ASSERT(found_documents[i].relevance >= found_documents[i+1].relevance);
-        }
-    }
-
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-        const auto found_documents = server.FindTopDocuments("dog"s);
-        ASSERT_EQUAL(found_documents.size(), 2);
-        ASSERT(found_documents[0].relevance - 0.405465 < 0.0001 );
-        ASSERT(found_documents[1].relevance - 0.135155 < 0.0001 );
-    }
-
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-        const auto found_documents = server.FindTopDocuments("");
-        ASSERT(found_documents.empty());
-
-    }
-
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-        const auto found_documents = server.FindTopDocuments("ghfhfdsgsfsfqfw");
-        ASSERT(found_documents.empty());
-
-    }
-
-
-    }
-
-// Тест на правильность подсчёта среднего рейтинга
-
-    void TestForCountingAverageRating(){
-
-        {
-            SearchServer server;
-            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, {10,20,30});
-            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, {1,2,3});
-            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, {1,2,3});
-            const auto found_documents = server.FindTopDocuments("cat");
-            ASSERT_EQUAL(found_documents[0].rating, 2);
-            ASSERT_EQUAL(found_documents[1].rating, 20);
-
-        }
-
-        {
-            SearchServer server;
-            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, {50,60,70});
-            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, {-10,20,30});
-            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, {-10,-20,-30,-4000,0});
-            const auto found_documents = server.FindTopDocuments("dog");
-            ASSERT_EQUAL(found_documents[0].rating, -812);
-            ASSERT_EQUAL(found_documents[1].rating, 60);
-        }
-
-    }
-
-// Тест на фильтрацию по заданному предикату
-
-    void TestForPredicateFilter(){
-        vector<int> ratings = {1,2,3};
-        {
-            SearchServer server;
-            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return rating > 2; });
-            ASSERT(found_documents.empty());
-        }
-
-        {
-            SearchServer server;
-            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return rating > 1; });
-            ASSERT_EQUAL(found_documents.size(), 5);
-        }
-
-        {
-            SearchServer server;
-            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return document_id == 21; });
-            ASSERT_EQUAL(found_documents.size(), 1);
-            ASSERT_EQUAL(found_documents[0].id, 21);
-        }
-
-        {
-            SearchServer server;
-            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::REMOVED, ratings);
-            server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::REMOVED, ratings);
-            server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
-            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
-            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::REMOVED; });
-            ASSERT_EQUAL(found_documents.size(), 2);
-            ASSERT_EQUAL(found_documents[0].id, 12);
-            ASSERT_EQUAL(found_documents[1].id, 11);
-        }
-    }
-
-// Тест на поиск по заданному статусу
-
-    void TestForStatusSearch(){
-    vector<int> ratings = {1,3,5};
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(11, "cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(12, "cat cat"s, DocumentStatus::IRRELEVANT, ratings);
-        server.AddDocument(13, "dog"s, DocumentStatus::BANNED, ratings);
-        const auto found_docs = server.FindTopDocuments("dog"s, DocumentStatus::BANNED);
-        ASSERT_EQUAL(found_docs[0].id, 13);
-    }
-
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(11, "cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(12, "cat cat"s, DocumentStatus::IRRELEVANT, ratings);
-        server.AddDocument(13, "dog"s, DocumentStatus::BANNED, ratings);
-        const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::IRRELEVANT);
-        ASSERT_EQUAL(found_docs.size(), 1);
-        ASSERT_EQUAL(found_docs[0].id, 12);
-    }
-
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(11, "cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(12, "cat cat"s, DocumentStatus::IRRELEVANT, ratings);
-        server.AddDocument(13, "dog"s, DocumentStatus::BANNED, ratings);
-        const auto found_docs = server.FindTopDocuments("cat dog"s, DocumentStatus::REMOVED);
-        ASSERT(found_docs.empty());
-    }
-
-    {
-        SearchServer server;
-        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(11, "cat"s, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(12, "cat cat"s, DocumentStatus::IRRELEVANT, ratings);
-        server.AddDocument(13, "dog"s, DocumentStatus::BANNED, ratings);
-        const auto found_docs = server.FindTopDocuments("cat dog"s, DocumentStatus::ACTUAL);
-        ASSERT_EQUAL(found_docs.size(), 2);
-        ASSERT_EQUAL(found_docs[0].id, 10);
-        ASSERT_EQUAL(found_docs[1].id, 11);
-    }
-
-    }
-
-// Тест на корректность вычисления релевантности
-
-    void TestForCorrectRelevanceCalculations(){
-        vector<int> ratings = {1,2,3};
+    void TestForRelevanceSorting() {
+        const vector<int> ratings = {1, 2, 3};
         {
             SearchServer server;
             server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
@@ -668,13 +486,125 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
             server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
             server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
             auto found_documents = server.FindTopDocuments("cat"s);
-            ASSERT(found_documents[0].relevance - 0.182322 < 0.0001);
-            ASSERT(found_documents[1].relevance - 0.155857 < 0.0001);
-            ASSERT(found_documents[2].relevance - 0.136741 < 0.0001);
-            ASSERT(found_documents[3].relevance - 0.136741 < 0.0001);
-            ASSERT(found_documents[4].relevance - 0.121548 < 0.0001);
+            for (int i = 0; i < static_cast<int>(found_documents.size()) - 1; ++i){
+                ASSERT(found_documents[i].relevance >= found_documents[i+1].relevance);
+            }
+        }
+    }
+
+// Тест на правильность подсчёта среднего рейтинга
+
+    void TestForCountingAverageRating() {
+        {
+            SearchServer server;
+            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, {10, 20, 30});
+            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, {1, 2, 3});
+            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, {1, 2, 3});
+            const auto found_documents = server.FindTopDocuments("cat");
+            ASSERT_EQUAL(found_documents[0].rating, (1 + 2 + 3) / 3);
+            ASSERT_EQUAL(found_documents[1].rating, (10 + 20 + 30) / 3);
+        }
+    }
+
+// Тест на фильтрацию по заданному предикату
+
+    void TestForPredicateFilter() {
+        vector<int> ratings = {1, 2, 3};
+        SearchServer server;
+        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
+        {
+            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return rating > 2; });
+            ASSERT(found_documents.empty());
         }
 
+        {
+            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return rating > 1; });
+            ASSERT_EQUAL(found_documents.size(), 5u);
+        }
+
+        {
+            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return document_id == 21; });
+            ASSERT_EQUAL(found_documents.size(), 1u);
+            ASSERT_EQUAL(found_documents[0].id, 21);
+        }
+
+        {
+            auto found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::REMOVED; });
+            ASSERT(found_documents.empty());
+            server.AddDocument(98, "cat"s, DocumentStatus::REMOVED, ratings);
+            found_documents = server.FindTopDocuments("cat"s, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::REMOVED; });
+            ASSERT_EQUAL(found_documents.size(), 1u);
+            ASSERT_EQUAL(found_documents[0].id, 98);
+        }
+    }
+
+// Тест на поиск по заданному статусу
+
+    void TestForStatusSearch() {
+        vector<int> ratings = {1, 3, 5};
+        SearchServer server;
+        server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(11, "cat"s, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(12, "cat cat"s, DocumentStatus::IRRELEVANT, ratings);
+        server.AddDocument(13, "dog"s, DocumentStatus::BANNED, ratings);
+        {
+            const auto found_docs = server.FindTopDocuments("dog"s, DocumentStatus::BANNED);
+            ASSERT_EQUAL(found_docs.size(), 1u);
+            ASSERT_EQUAL(found_docs[0].id, 13);
+        }
+
+        {
+            const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::IRRELEVANT);
+            ASSERT_EQUAL(found_docs.size(), 1u);
+            ASSERT_EQUAL(found_docs[0].id, 12);
+        }
+
+        {
+            const auto found_docs = server.FindTopDocuments("cat dog"s, DocumentStatus::REMOVED);
+            ASSERT(found_docs.empty());
+        }
+
+        {
+            const auto found_docs = server.FindTopDocuments("cat dog"s, DocumentStatus::ACTUAL);
+            ASSERT_EQUAL(found_docs.size(), 2u);
+            ASSERT_EQUAL(found_docs[0].id, 10);
+            ASSERT_EQUAL(found_docs[1].id, 11);
+        }
+    }
+
+// Тест на корректность вычисления релевантности
+
+    void TestForCorrectRelevanceCalculations(){
+        vector<int> ratings = {1, 2, 3};
+        {
+            SearchServer server;
+            server.AddDocument(10, "cat cat dog"s, DocumentStatus::ACTUAL, ratings);
+            server.AddDocument(11, "cat cat dog cat"s, DocumentStatus::ACTUAL, ratings);
+            server.AddDocument(12, "cat cat dog cat cat"s, DocumentStatus::ACTUAL, ratings);
+            server.AddDocument(13, "cat cat dog cat god cat cat cat"s, DocumentStatus::ACTUAL, ratings);
+            server.AddDocument(21, "cat cat cat"s, DocumentStatus::ACTUAL, ratings);
+            server.AddDocument(96, "dog"s, DocumentStatus::ACTUAL, ratings);
+            auto found_documents = server.FindTopDocuments("cat"s);
+            /*
+            Ручной подсчёт релевантностей, которые должны получится
+            Подсчёт глобального IDF: IDF = log (6. / 5) = 0.182322
+            Документ 10: Кол-во слов: 3; Кол-во вхождений слов запроса в документ: 2; TF = 2. / 3 = 0.666667; TF-IDF = 0.666667 * 0.182322 = 0.121548
+            Документ 11: Кол-во слов: 4; Кол-во вхождений слов запроса в документ: 3; TF = 3. / 4 = 0.75    ; TF-IDF = 0.75 * 0.182322     = 0.136741
+            Документ 12: Кол-во слов: 5; Кол-во вхождений слов запроса в документ: 4; TF = 4. / 5 = 0.8     ; TF-IDF = 0.8 * 0.182322      = 0.145857
+            Документ 13: Кол-во слов: 8; Кол-во вхождений слов запроса в документ: 6; TF = 6. / 8 = 0.75    ; TF-IDF = 0.75 * 0.182322     = 0.136741
+            Документ 21: Кол-во слов: 3; Кол-во вхождений слов запроса в документ: 3; TF = 3. / 3 = 1       ; TF-IDF = 1 * 0.182322        = 0.182322
+            */
+            ASSERT(found_documents[0].relevance - 0.182322 < 1e-4);
+            ASSERT(found_documents[1].relevance - 0.145857 < 1e-4);
+            ASSERT(found_documents[2].relevance - 0.136741 < 1e-4);
+            ASSERT(found_documents[3].relevance - 0.136741 < 1e-4);
+            ASSERT(found_documents[4].relevance - 0.121548 < 1e-4);
+        }
     }
 
 // Макрос и функция для него для запуска тестов и вывода в поток cerr сообщения OK, если тест прошёл успешно
