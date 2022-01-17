@@ -8,9 +8,7 @@
 
 using namespace std;
 
-void AddDocument(SearchServer& se, int i, string s, DocumentStatus d, vector<int> r) {
-    se.AddDocument(i,s,d,r);
-}
+
 
 
 

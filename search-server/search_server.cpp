@@ -167,18 +167,18 @@ SearchServer::SearchServer(const std::string& stop_words_text)
 
         if (check_for_existing_id) {
             return (document_to_word_freqs_.at(document_id));
-        } else {
-            return (dummy);
         }
+        
+        return (dummy);
     }
 
     void SearchServer::RemoveDocument(int document_id) {
         bool check_for_existing_id = binary_search(document_ids_.begin(), document_ids_.end(), document_id);
 
-        std::map<std::string, bool> check_for_remove;
+        std::map<std::string, bool> marked_for_remove;
 
         if (check_for_existing_id) {
-            document_ids_.erase(find(document_ids_.begin(), document_ids_.end(), document_id));
+            document_ids_.erase(document_id);
 
             documents_.erase(document_id);
 
@@ -187,12 +187,13 @@ SearchServer::SearchServer(const std::string& stop_words_text)
             for (auto& [word, content] : word_to_document_freqs_) {
                 for (auto& [id, freq] : content) {
                     if (id == document_id) {
-                        check_for_remove[word] = true;
+                        marked_for_remove[word] = true;
+                        break;
                     }
                 }
             }
 
-            for (auto& [word, check] : check_for_remove) {
+            for (auto& [word, check] : marked_for_remove) {
                 if (check) {
                     word_to_document_freqs_[word].erase(document_id);
                 }

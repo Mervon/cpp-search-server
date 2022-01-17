@@ -21,16 +21,16 @@ bool MyCompare (const std::map<std::string, double>& lhs, const std::map<std::st
 void RemoveDuplicates(SearchServer& search_server) {
     using namespace std::string_literals;
 
-    std::map<int, std::map<std::string, double>> test;
+    std::map<int, std::map<std::string, double>> temp;
 
-    std::set<int> mark;
+    std::set<int> marks;
 
     std::vector<int> ids;
 
     for (int id : search_server) {
         const auto content = search_server.GetWordFrequencies(id);
         for (auto& cont : content) {
-            test[id][cont.first] = cont.second;
+            temp[id][cont.first] = cont.second;
             ids.push_back(id);
         }
     }
@@ -39,13 +39,13 @@ void RemoveDuplicates(SearchServer& search_server) {
     for (int id = ids[i]; i < ids.size(); id = ids[++i]) {
         int j = i;
         for (int id_ = ids[j]; j < ids.size(); id_ = ids[++j]) {
-            if (id != id_ && MyCompare(test[id], test[id_]) ) {
-                mark.insert(id_);
+            if (id != id_ && MyCompare(temp[id], temp[id_]) ) {
+                marks.insert(id_);
             }
         }
     }
 
-    for (int i : mark) {
+    for (int i : marks) {
         std::cout << "Found duplicate document id " << i << std::endl;
         search_server.RemoveDocument(i);
     }
