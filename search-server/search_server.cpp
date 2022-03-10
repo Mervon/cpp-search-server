@@ -154,9 +154,9 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
     if (std::any_of(std::execution::par, query.minus_words.begin(), query.minus_words.end(),
             [this, document_id](std::string_view word) {
                 return document_to_word_freqs_.at(document_id).count(word);
-            })) {
-            return { {}, documents_.at(document_id).status };
-        }
+            })) { 
+        return { {}, documents_.at(document_id).status }; 
+    }
 
     std::copy_if(std::execution::par, std::make_move_iterator(query.plus_words.begin()), std::make_move_iterator(query.plus_words.end()),
             matched_words.begin(),

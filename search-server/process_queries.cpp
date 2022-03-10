@@ -21,10 +21,10 @@ std::vector<Document> ProcessQueriesJoined(
     const SearchServer& search_server,
     const std::vector<std::string>& queries) {
     std::vector<Document> documents;
-    std::vector<std::vector<Document>> temp = ProcessQueries(search_server, queries);
-    for (auto& item : temp) {
-        for (auto& item2 : item) {
-            documents.push_back(item2);
+    std::vector<std::vector<Document>> processed_queries = ProcessQueries(search_server, queries);
+    for (auto& query_row : processed_queries) {
+        for (auto& item : query_row) {
+            documents.push_back(item);
         }
     }
     return documents;
